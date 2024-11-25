@@ -1,59 +1,52 @@
 import requests
-import time
+import json
+from tqdm import tqdm
 
 
 class VkClient:
     def __init__(self, token):
         self.token = token
-        self.api_version = "5.131"
-        self.base_url = "https://api.vk.com/method/"
-        self.max_retries = 5  # Максимальное количество попыток
+        self.api_url = "https://api.vk.com/method/"
+        self.version = "5.131"
 
     def get_photos(self, user_id, count=5):
-        url = self.base_url + "photos.get"
+        """Получение фотографий профиля пользователя."""
         params = {
             "owner_id": user_id,
             "album_id": "profile",
             "extended": 1,
             "photo_sizes": 1,
             "count": count,
-            "v": self.api_version,
+            "v": self.version,
             "access_token": self.token,
         }
+        response = requests.get(self.api_url + "photos.get", params=params).json()
 
-        for attempt in range(self.max_retries):
-            response = requests.get(url, params=params).json()
+        if "error" in response:
+            error = response["error"]
+            if error["error_code"] == 14:  # Капча
+                captcha_img = error["captcha_img"]
+                captcha_sid = error["captcha_sid"]
+                print(f"Требуется капча: {captcha_img}")
+                captcha_key = input("Введите текст с капчи: ")
+                params["captcha_sid"] = captcha_sid
+                params["captcha_key"] = captcha_key
+                response = requests.get(self.api_url + "photos.get", params=params).json()
 
-            # Проверка на капчу
-            if "error" in response and response["error"]["error_code"] == 14:
-                captcha_sid = response["error"]["captcha_sid"]
-                captcha_img = response["error"]["captcha_img"]
-                print(f"Пожалуйста, введите капчу: {captcha_img}")
-                captcha_key = input("Введите текст с изображения: ")
-                params.update({"captcha_sid": captcha_sid, "captcha_key": captcha_key})
-                continue
-
-            # Проверка других ошибок
             if "error" in response:
-                error_msg = response["error"]["error_msg"]
-                if error_msg.lower() == "retry":
-                    print(f"Попытка {attempt + 1}/{self.max_retries}: Сервер запросил повторить.")
-                    time.sleep(2 ** attempt)  # Увеличиваем время ожидания с каждой попыткой
-                    continue
-                else:
-                    raise Exception(f"Ошибка VK API: {error_msg}")
+                raise Exception(f"Ошибка VK API: {response['error']['error_msg']}")
 
-            # Успешный ответ
-            if "response" in response:
-                photos = []
-                for item in response["response"]["items"]:
-                    max_size = max(item["sizes"], key=lambda x: x["width"] * x["height"])
-                    photos.append({
-                        "likes": item["likes"]["count"],
-                        "date": item["date"],
-                        "url": max_size["url"]
-                    })
-                return photos
+        photos = []
+        for item in response["response"]["items"]:
+            max_size_photo = max(item["sizes"], key=lambda size: size["height"] * size["width"])
+            file_name = f"{item['likes']['count']}.jpg"
+            if any(photo["file_name"] == file_name for photo in photos):
+                file_name = f"{item['likes']['count']}_{item['date']}.jpg"
+            photos.append({"file_name": file_name, "size": max_size_photo["type"], "url": max_size_photo["url"]})
 
-        # Если все попытки исчерпаны
-        raise Exception("Не удалось получить фотографии после нескольких попыток.")
+        return photos
+
+    def save_photos_to_json(self, photos, file_name):
+        """Сохранение информации о фотографиях в JSON."""
+        with open(file_name, "w") as file:
+            json.dump(photos, file, indent=4)
