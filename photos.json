@@ -1,0 +1,8 @@
+{
+    "error": {
+        "error_code": 14,
+        "error_msg": "Captcha needed",
+        "captcha_sid": "XBWIYXDWgRF-rjJphIkhv_0ZmgBdy24Kbvr0R1LSDs-ssH2HoG1f70mT24quCYWh6gxX84125X9RvUctb2ULrxXdUR8IdpgMAF_67XVa2BpguMyAFbcA9UVDktCz69G9dBWZeRXRGGc1ykSF",
+        "captcha_img": "https://api.vk.com/captcha.jpg?captcha_sid=XBWIYXDWgRF-rjJphIkhv_0ZmgBdy24Kbvr0R1LSDs-ssH2HoG1f70mT24quCYWh6gxX84125X9RvUctb2ULrxXdUR8IdpgMAF_67XVa2BpguMyAFbcA9UVDktCz69G9dBWZeRXRGGc1ykSF"
+    }
+}
